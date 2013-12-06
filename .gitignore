@@ -1,4 +1,6 @@
 target/
+.worksheet/
+.cache
 
 # OS generated files #
 ######################

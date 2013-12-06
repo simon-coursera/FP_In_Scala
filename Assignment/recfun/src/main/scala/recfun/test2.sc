@@ -6,5 +6,5 @@ object test2 {
 
   l.sortWith(_>=_)                                //> res0: List[Int] = List(9, 7, 6, 3, 2, 1)
   
-  12 % 5                                          //> res1: Int(2) = 2
+  12 % 3                                          //> res1: Int(0) = 0
 }
