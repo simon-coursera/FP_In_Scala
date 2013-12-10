@@ -20,65 +20,57 @@ object Main {
   /**
    * Exercise 2
    */
+
+
   def balance(chars: List[Char]): Boolean = {
-    val constParenthesesPairs = List('(', ')')
 
-    def matchParenthese(chars: List[Char], head: Int): Int = {
-      if (chars(head) != constParenthesesPairs(0)) -1
+    def reduceLeftParenthese(parentheseChars: List[Char]): (Boolean, List[Char]) = {
+      if (parentheseChars.isEmpty) (false, List.empty)
       else {
-        var iHead: Int = head + 1
-        var isFound = false
+        if (parentheseChars.head != '(') (false, List.empty)
+        else reduceRightParenthese(parentheseChars.tail)
+      }
+    }
 
-        while (iHead < chars.length && !isFound) {
-          if (chars(iHead) == constParenthesesPairs(0)) { //Find another parenthese
-            iHead = matchParenthese(chars, iHead)
-          } else {
-            if (chars(iHead) == constParenthesesPairs(1)) isFound = true
-
-            iHead = iHead + 1
-          }
-        }
-
-        if (isFound) iHead else -1
+    def reduceRightParenthese(parentheseChars: List[Char]): (Boolean, List[Char]) = {
+      if (parentheseChars.isEmpty) (false, parentheseChars)
+      else {
+        if (parentheseChars.head == '(') {
+          val (success, remainings) = reduceLeftParenthese(parentheseChars)
+          if (!success) (false, List.empty)
+          else reduceRightParenthese(remainings)
+        } else (true, parentheseChars.tail)
       }
     }
 
     val parentheseChars = chars.filter(x => x == '(' || x == ')')
     if (parentheseChars.isEmpty) true
-	else {
-		var iHead = 0
-		while (iHead < parentheseChars.length && iHead >= 0) {
-		  iHead = matchParenthese(parentheseChars, iHead)
-		}
+    else {
+      val (success, remainings) = reduceLeftParenthese(parentheseChars)
 
-		iHead != -1
-	}
+      if (!success) false
+      else {
+        if (remainings.isEmpty) true
+        else balance(remainings)
+      }
+    }
   }
 
   /**
    * Exercise 3
    */
   def countChange(money: Int, coins: List[Int]): Int = {
-    var allCombinations = Set.empty[List[Int]]
-
-    def findChange(money: Int, coins: List[Int], combinations: List[Int]): Unit = {
-      val fitCoins = coins.filter(c => c <= money).sortWith(_ >= _)
-
-      fitCoins.foreach { x =>
-        {
-          if (x == money) {
-            val foundCombinations = combinations ::: List(x)
-            allCombinations += foundCombinations
-            //print("found ")
-            //println(foundCombinations)
-          } else {
-            findChange(money - x, fitCoins.filter(c => x <= c ), combinations ::: List(x))
-          }
-        }
+    def findChange(money: Int, coins: List[Int], matchingCoins: List[Int]): Int = {
+      if (coins.isEmpty) 0
+      else {
+      	val restCount = findChange(money, coins.tail, matchingCoins)	//Find the rest combinations without head coin
+      	
+        if (coins.head == money) 1 + restCount
+        else if (coins.head < money) findChange(money - coins.head, coins, matchingCoins ::: List(coins.head)) + restCount
+        else restCount
       }
     }
 
-    findChange(money, coins, List())
-    allCombinations.size
-  }   
+    findChange(money, coins.filter(c => c <= money).sortWith(_ >= _), List())
+  }
 }
