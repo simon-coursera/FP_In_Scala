@@ -1,0 +1,250 @@
+package objsets
+
+object backup {
+  println("Welcome to the Scala worksheet")       //> Welcome to the Scala worksheet
+
+  import common._
+  import TweetReader._
+
+  /**
+   * A class to represent tweets.
+   */
+  class Tweet(val user: String, val text: String, val retweets: Int) {
+    override def toString: String =
+      "User: " + user + "\n" +
+        "Text: " + text + " [" + retweets + "]"
+
+    def contains(keywords: List[String]): Boolean = {
+      if (keywords.isEmpty) false
+      else if (text contains keywords.head) true
+      else contains(keywords.tail)
+    }
+  }
+
+  /**
+   * This represents a set of objects of type `Tweet` in the form of a binary search
+   * tree. Every branch in the tree has two children (two `TweetSet`s). There is an
+   * invariant which always holds: for every branch `b`, all elements in the left
+   * subtree are smaller than the tweet at `b`. The eleemnts in the right subtree are
+   * larger.
+   *
+   * Note that the above structure requires us to be able to compare two tweets (we
+   * need to be able to say which of two tweets is larger, or if they are equal). In
+   * this implementation, the equality / order of tweets is based on the tweet's text
+   * (see `def incl`). Hence, a `TweetSet` could not contain two tweets with the same
+   * text from different users.
+   *
+   *
+   * The advantage of representing sets as binary search trees is that the elements
+   * of the set can be found quickly. If you want to learn more you can take a look
+   * at the Wikipedia page [1], but this is not necessary in order to solve this
+   * assignment.
+   *
+   * [1] http://en.wikipedia.org/wiki/Binary_search_tree
+   */
+  abstract class TweetSet {
+
+    /**
+     * This method takes a predicate and returns a subset of all the elements
+     * in the original set for which the predicate is true.
+     *
+     * Question: Can we implment this method here, or should it remain abstract
+     * and be implemented in the subclasses?
+     */
+    def filter(p: Tweet => Boolean): TweetSet = filterAcc(p, new Empty)
+
+    /**
+     * This is a helper method for `filter` that propagetes the accumulated tweets.
+     */
+    def filterAcc(p: Tweet => Boolean, acc: TweetSet): TweetSet
+
+    /**
+     * Returns a new `TweetSet` that is the union of `TweetSet`s `this` and `that`.
+     *
+     * Question: Should we implment this method here, or should it remain abstract
+     * and be implemented in the subclasses?
+     */
+    //def union(that: TweetSet): TweetSet
+    def union(that: TweetSet): TweetSet = unionAcc(that)
+    def unionAcc(acc: TweetSet): TweetSet
+
+    /**
+     * Returns the tweet from this set which has the greatest retweet count.
+     *
+     * Calling `mostRetweeted` on an empty set should throw an exception of
+     * type `java.util.NoSuchElementException`.
+     *
+     * Question: Should we implment this method here, or should it remain abstract
+     * and be implemented in the subclasses?
+     */
+    def mostRetweeted: Tweet
+    def mostRetweetedHelper(candidate: Tweet): Tweet
+
+    /**
+     * Returns a list containing all tweets of this set, sorted by retweet count
+     * in descending order. In other words, the head of the resulting list should
+     * have the highest retweet count.
+     *
+     * Hint: the method `remove` on TweetSet will be very useful.
+     * Question: Should we implment this method here, or should it remain abstract
+     * and be implemented in the subclasses?
+     */
+    /*
+  def descendingByRetweet: TweetList = descendingByRetweetHelper(this, Nil)
+
+  def descendingByRetweetHelper(workingSet: TweetSet, acc: TweetList): TweetList = {
+    if (!workingSet.isEmpty)
+      descendingByRetweetHelper(workingSet.remove(workingSet.mostRetweeted), new Cons(workingSet.mostRetweeted, acc))
+    else
+      acc.reverse
+  }
+	*/
+    def descendingByRetweet: TweetList = descendingByRetweetHelper(this.mostRetweeted, this.remove(this.mostRetweeted))
+
+    def descendingByRetweetHelper(preMostRetweeted: Tweet, workingSet: TweetSet): TweetList = {
+      if (workingSet.isEmpty) {
+        new Cons(preMostRetweeted, Nil)
+      } else {
+        val mostRetweeted = workingSet.mostRetweeted
+        new Cons(preMostRetweeted, descendingByRetweetHelper(mostRetweeted, workingSet.remove(mostRetweeted)))
+      }
+    }
+    /**
+     * The following methods are already implemented
+     */
+
+    /**
+     * Returns a new `TweetSet` which contains all elements of this set, and the
+     * the new element `tweet` in case it does not already exist in this set.
+     *
+     * If `this.contains(tweet)`, the current set is returned.
+     */
+    def incl(tweet: Tweet): TweetSet
+
+    /**
+     * Returns a new `TweetSet` which excludes `tweet`.
+     */
+    def remove(tweet: Tweet): TweetSet
+
+    /**
+     * Tests if `tweet` exists in this `TweetSet`.
+     */
+    def contains(tweet: Tweet): Boolean
+
+    /**
+     * This method takes a function and applies it to every element in the set.
+     */
+    def foreach(f: Tweet => Unit): Unit
+
+    def isEmpty: Boolean
+  }
+
+  class Empty extends TweetSet {
+
+    def filterAcc(p: Tweet => Boolean, acc: TweetSet): TweetSet = acc
+
+    /**
+     * The following methods are already implemented
+     */
+
+    def contains(tweet: Tweet): Boolean = false
+
+    def incl(tweet: Tweet): TweetSet = new NonEmpty(tweet, new Empty, new Empty)
+
+    def remove(tweet: Tweet): TweetSet = this
+
+    def foreach(f: Tweet => Unit): Unit = ()
+
+    //def union(that: TweetSet): TweetSet = that
+    def unionAcc(acc: TweetSet): TweetSet = acc
+
+    def isEmpty: Boolean = true //new added
+
+    def mostRetweeted: Tweet = throw new NoSuchElementException //new added
+    def mostRetweetedHelper(candidate: Tweet): Tweet = candidate
+  }
+
+  class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
+
+    def filterAcc(p: Tweet => Boolean, acc: TweetSet): TweetSet = {
+      left.filterAcc(p, right.filterAcc(p, if (p(elem)) acc.incl(elem) else acc))
+    }
+
+    /**
+     * The following methods are already implemented
+     */
+
+    def contains(x: Tweet): Boolean =
+      if (x.text < elem.text) left.contains(x)
+      else if (elem.text < x.text) right.contains(x)
+      else true
+
+    def incl(x: Tweet): TweetSet = {
+      if (x.text < elem.text) new NonEmpty(elem, left.incl(x), right)
+      else if (elem.text < x.text) new NonEmpty(elem, left, right.incl(x))
+      else this
+    }
+
+    def remove(tw: Tweet): TweetSet =
+      if (tw.text < elem.text) new NonEmpty(elem, left.remove(tw), right)
+      else if (elem.text < tw.text) new NonEmpty(elem, left, right.remove(tw))
+      else left.union(right)
+
+    def foreach(f: Tweet => Unit): Unit = {
+      f(elem)
+      left.foreach(f)
+      right.foreach(f)
+    }
+
+    //def union(that: TweetSet): TweetSet = (left union (right union that)) incl elem //Can't do left union right cause it is toooo slow
+    def unionAcc(acc: TweetSet): TweetSet = right unionAcc (left unionAcc acc.incl(elem))
+
+    def isEmpty: Boolean = false
+    /*
+  def mostRetweeted: Tweet = {
+    val leftMost = if (left.isEmpty) elem else left.mostRetweeted
+    val rightMost = if (right.isEmpty) elem else right.mostRetweeted
+
+    val bigger = if (elem.retweets > leftMost.retweets) elem else leftMost
+    if (bigger.retweets > rightMost.retweets) bigger else rightMost
+  }
+*/
+    def mostRetweeted: Tweet = mostRetweetedHelper(elem)
+
+    def mostRetweetedHelper(candidate: Tweet): Tweet = {
+      val children = left.mostRetweetedHelper(right.mostRetweetedHelper(candidate))
+      if (elem.retweets > children.retweets) elem else children
+    }
+  }
+
+  trait TweetList {
+    def head: Tweet
+    def tail: TweetList
+    def isEmpty: Boolean
+    def foreach(f: Tweet => Unit): Unit =
+      if (!isEmpty) {
+        f(head)
+        tail.foreach(f)
+      }
+    //def reverse: TweetList
+  }
+
+  object Nil extends TweetList {
+    def head = throw new java.util.NoSuchElementException("head of EmptyList")
+    def tail = throw new java.util.NoSuchElementException("tail of EmptyList")
+    def isEmpty = true
+    //def reverse = this
+  }
+
+  class Cons(val head: Tweet, val tail: TweetList) extends TweetList {
+    def isEmpty = false
+    /*
+  def reverse: TweetList = reverseHelper(this, Nil)
+  def reverseHelper(list: TweetList, acc: TweetList): TweetList = {
+    if (list.isEmpty) acc
+    else reverseHelper(list.tail, new Cons(list.head, acc))
+  }
+  */
+  }
+
+}
