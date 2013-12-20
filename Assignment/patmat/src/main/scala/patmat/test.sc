@@ -2,12 +2,6 @@ package patmat
 import patmat.Huffman._
 
 object test {
-  println("Welcome to the Scala worksheet")       //> Welcome to the Scala worksheet
-  val sampleTree = makeCodeTree(
-    makeCodeTree(Leaf('x', 1), Leaf('e', 1)),
-    Leaf('t', 2))                                 //> sampleTree  : patmat.Huffman.Fork = Fork(Fork(Leaf(x,1),Leaf(e,1),List(x, e)
-                                                  //| ,2),Leaf(t,2),List(x, e, t),4)
-
 
 	val trees = makeOrderedLeafList(List(('a',4), ('b',2), ('c', 5), ('c', 1)))
                                                   //> trees  : List[patmat.Huffman.Leaf] = List(Leaf(c,1), Leaf(b,2), Leaf(a,4), L
