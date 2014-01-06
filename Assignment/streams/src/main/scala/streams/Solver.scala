@@ -28,11 +28,11 @@ trait Solver extends GameDef {
    * It should only return valid neighbors, i.e. block positions
    * that are inside the terrain.
    */
-  def neighborsWithHistory(b: Block, history: List[Move]): Stream[(Block, List[Move])] = {
+  def neighborsWithHistory(b: Block, history: List[Move]): Stream[(Block, List[Move])] = 
     Stream((b.left, Left), (b.right, Right), (b.up, Up), (b.down, Down)).
       filter(_._1.isLegal).
       map(t => (t._1, t._2 :: history))
-  }
+  
 
   /**
    * This function returns the list of neighbors without the block
@@ -69,11 +69,11 @@ trait Solver extends GameDef {
     explored: Set[Block]): Stream[(Block, List[Move])] =
     if (initial.isEmpty) Stream.empty
     else {
-      val more = (for (state <- initial) yield newNeighborsOnly(neighborsWithHistory(state._1, state._2), explored)).flatten
+      lazy val more = (for (state <- initial) yield newNeighborsOnly(neighborsWithHistory(state._1, state._2), explored)).flatten
       if (more.isEmpty) initial
       else {
-        val more_explored = more.foldLeft(explored)((a, b) => a + b._1)
-        initial ++ more ++ from(more, more_explored)
+        val more_explored = more.foldLeft(explored)((result, e) => result + e._1)
+        initial ++ more ++ from(more, more.foldLeft(explored)((result, e) => result + e._1))
       }
     }
 
@@ -87,10 +87,8 @@ trait Solver extends GameDef {
    * with the history how it was reached.
    */
   lazy val pathsToGoal: Stream[(Block, List[Move])] =
-    for {
-      path <- from(pathsFromStart, Set())
-      if path._1.isStanding && path._1.b1 == goal
-    } yield path
+    for (path <- from(pathsFromStart, Set()) if path._1.isStanding && path._1.b1 == goal)
+      yield path
 
   /**
    * The (or one of the) shortest sequence(s) of moves to reach the
@@ -103,6 +101,6 @@ trait Solver extends GameDef {
   lazy val solution: List[Move] = {
     val paths = pathsToGoal
     if (paths.isEmpty) List()
-    else paths(0)._2
+    else paths(0)._2.reverse
   }
 }
